@@ -3,9 +3,12 @@
 
 import asyncio
 import collections
+import sys
 
 from .connection import connect
 from .utils import _PoolContextManager, _PoolConnectionContextManager
+
+PY_VER = sys.version_info
 
 __all__ = ['create_pool', 'Pool']
 
@@ -25,8 +28,12 @@ async def _create_pool(minsize=10, maxsize=10, echo=False, loop=None,
     pool = Pool(minsize=minsize, maxsize=maxsize, echo=echo, loop=loop,
                 pool_recycle=pool_recycle, **kwargs)
     if minsize > 0:
-        with (await pool._cond):
-            await pool._fill_free_pool(False)
+        if PY_VER >= (3, 9):
+            async with pool._cond:
+                await pool._fill_free_pool(False)
+        else:
+            with (await pool._cond):
+                await pool._fill_free_pool(False)
     return pool
 
 
